@@ -18,7 +18,7 @@ BERT_BATCH = int(os.environ.get("BERT_BATCH", 32))
 BERT_LR = float(os.environ.get("BERT_LR", 2e-5))
 
 # Hugging Face Hub repo that hosts the trained weights (the app downloads from here if models/ is empty)
-HF_REPO_ID = os.environ.get("HF_REPO_ID", "")
+HF_REPO_ID = os.environ.get("HF_REPO_ID", "GokseninMuhammet/swe015-chat-moderation-models")
 
 SEED = 42
 VAL_FRACTION = 0.10           # validation split carved out of the official training set
