@@ -5,7 +5,7 @@ A Turkish chat-moderation application for a gaming platform: every message is la
 response time of each message against a **50 ms / message CPU budget**. The app runs a **dynamically
 quantized (INT8) BERTurk** by default and lets the user switch to / compare with every other model.
 
-Author: Muhammet Göksenin Çelik · SWE015 Introduction to Large Language Models · İstinye University
+Author: Muhammet Çelik (2509011060) · SWE015 Introduction to Large Language Models · İstinye University
 
 ## Model ladder (all evaluated on the same held-out test set)
 
@@ -22,8 +22,25 @@ Regex normalization of noisy text (leetspeak, separated/repeated letters, Turkis
 
 ## Results
 
-Produced by `train/05_evaluate.py` → [`results/results.md`](results/results.md) (macro-F1, size, CPU latency
-averaged over 200 messages, hardware stated). *Numbers are only ever copied from that file.*
+Official OffensEval-TR 2020 test split, n = 3,528 (20.3 % OFF). Produced by `train/05_evaluate.py`
+(full output in [`results/results.md`](results/results.md)).
+
+| Model | Precision | Macro-F1 | Accuracy | OFF recall | Size (MB) | Latency mean / p95 (ms) | ≤ 50 ms |
+|---|---|---|---|---|---|---|---|
+| Lexicon + edit distance (rule) | rules | 0.700 | 0.808 | 0.513 | 0.0 | 0.2 / 0.5 | ✓ |
+| TF-IDF + LogReg | FP64 (sklearn) | 0.770 | 0.861 | 0.568 | 2.3 | 2.3 / 3.1 | ✓ |
+| word2vec + FFNN | FP32 | 0.695 | 0.801 | 0.524 | 12.7 | 0.4 / 0.6 | ✓ |
+| BERTurk FP32 | FP32 | 0.809 | 0.884 | 0.640 | 442.5 | 134.3 / 207.7 | ✗ |
+| **BERTurk INT8 (dynamic quant.)** | INT8 linear / FP32 embeddings | **0.809** | 0.882 | 0.648 | **186.0** | **59.1 / 119.7** | ✗ |
+
+Latency: batch size 1, preprocessing + tokenization included, mean over 200 test messages after 10 warm-up
+runs. Hardware: Google Colab, Intel Xeon CPU @ 2.00 GHz, 2 logical CPUs, torch threads = 1, CPU only.
+Size = serialized model weights (tokenizer/config excluded).
+
+Quantization kept macro-F1 unchanged (0.809), made the model 2.4× smaller and 2.3× faster, but the mean
+latency stays slightly above the 50 ms budget on the shared Colab CPU. Repeated INT8 runs on the same
+hardware measured 51.1, 57.0 (max length 64) and 70.4 ms (2 threads), so Colab CPU latency varies by
+roughly ±10–20 % between runs.
 
 ## Run the application (single command)
 
@@ -31,12 +48,13 @@ averaged over 200 messages, hardware stated). *Numbers are only ever copied from
 git clone https://github.com/MuhammetGoksenin/swe015-chat-moderation.git
 cd swe015-chat-moderation
 pip install -r requirements.txt
-HF_REPO_ID=<hf-user>/swe015-chat-moderation-models python app.py
+python app.py
 ```
 
 Open http://127.0.0.1:7860. On first start the trained weights (~0.6 GB) are downloaded from the
-Hugging Face Hub into `models/` (weights are not stored in git). Set `GRADIO_SHARE=1` for a public link
-(e.g. on Colab). Windows PowerShell: `$env:HF_REPO_ID="<hf-user>/swe015-chat-moderation-models"; python app.py`.
+Hugging Face Hub ([GokseninMuhammet/swe015-chat-moderation-models](https://huggingface.co/GokseninMuhammet/swe015-chat-moderation-models))
+into `models/` — weights are not stored in git. Set `GRADIO_SHARE=1` for a public link
+(e.g. on Colab).
 
 ## Reproduce training (Google Colab, T4 GPU)
 
@@ -49,7 +67,7 @@ python train/02_word2vec_ffnn.py    # word2vec + FFNN (SGD)
 python train/03_finetune_bert.py    # BERTurk fine-tuning (GPU recommended)
 python train/04_quantize.py         # dynamic INT8 quantization
 python train/05_evaluate.py         # results table on the test set (CPU)
-HF_REPO_ID=<hf-user>/swe015-chat-moderation-models python train/06_push_to_hub.py
+HF_REPO_ID=<your-hf-user>/swe015-chat-moderation-models python train/06_push_to_hub.py   # only to re-upload
 ```
 
 `bash tests/smoke_test.sh` runs the whole pipeline on synthetic data with a tiny random BERT (code check
