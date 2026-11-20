@@ -9,6 +9,7 @@ Run:  python app.py      (then open http://127.0.0.1:7860)
 import html
 import os
 import time
+os.environ.setdefault("HF_HUB_DISABLE_XET", "1")  # the xet downloader can hang on Colab
 
 import gradio as gr
 import pandas as pd
